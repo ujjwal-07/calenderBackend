@@ -1,4 +1,6 @@
+const { raw } = require("express");
 const Event = require("../models/user");
+const XLSX = require('xlsx');
 
 //  Add Event to a Date
 exports.addEvent = async (req, res) => {
@@ -20,6 +22,58 @@ exports.addEvent = async (req, res) => {
     res.status(500).json({ error: "Server Error" });
   }
 };
+
+
+exports.addExcelData = async (req,res)=>{
+
+  const normalizeDate = (date) => {
+    if (!date) return "";
+    
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1);
+    const day = String(d.getDate());
+    return `${year}-${month}-${day}`;
+  };
+
+  try{
+    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+  
+    const jsonData = XLSX.utils.sheet_to_json(sheet,{
+      raw: false
+    });
+
+    const cleanedData = jsonData.map(row => ({
+      Date: normalizeDate(row.Date || row.date), // Force into YYYY-MM-DD
+      Events: row.Events || row.event
+    }));
+    console.log("Parsed Excel Data:", cleanedData);
+    for(const row of cleanedData){
+      const data = row.Events.split(",");
+      const date = row.Date;
+      for( var i =0;i< data.length ;i++){
+        let existingEvent = await Event.findOne({ date:date });
+
+        if (existingEvent) {
+          if(existingEvent.events.includes(data[i] == false)){
+          existingEvent.events.push(data[i]);
+          await existingEvent.save();
+          }else{
+            console.log(data[i],"Data already added.")
+          }
+        } else {
+          existingEvent = new Event({ date, events: [data[i]] });
+          await existingEvent.save();
+        }
+      }
+    
+    }
+  }catch(err){
+    console.log(err)
+  }
+}
 
 //  Get Events for a Specific Date
 exports.getEventsByDate = async (req, res) => {
