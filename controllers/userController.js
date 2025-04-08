@@ -89,23 +89,24 @@ exports.addExcelData = async (req,res)=>{
     const jsonData = XLSX.utils.sheet_to_json(sheet,{
       raw: false
     });
-    console.log(jsonData)
+    console.log(jsonData, jsonData[0].hasOwnProperty("Activity Performed"))
     console.log(jsonData.map(row=>{
       console.log("Date : ", row.Date)
 
       console.log("Normalised Date : ", normalizeDate(row.Date))
     }))
+    if(jsonData[0].hasOwnProperty("Date") && jsonData[0].hasOwnProperty("Activity Performed")){
     const cleanedData = jsonData.map(row => ({
       
       Date: normalizeDate(row.Date), // Force into YYYY-MM-DD
-      Events: row.Events || row.event
+      Events: row["Activity Performed"]
     }));
     console.log("Parsed Excel Data:", cleanedData[0].Date);
     for (const row of cleanedData) {
       const date = row.Date;
-    console.log(row.Events, "This is a evet")
+    console.log(row, "This is a evet")
       // Skip if there's no event
-      if (!row.Events || row.Events.trim() === "") {
+      if (!row.Events|| row.Events.trim() === "") {
         console.log(`Skipping ${row.Date} as it has no events.`);
         continue;
       }
@@ -133,7 +134,12 @@ exports.addExcelData = async (req,res)=>{
         }
       }
     }
-    
+    res.status(200).json({message: "Data saved successfully!" })
+
+  }else{
+// Preferred way
+res.status(400).json({ message: "Invalid Format!" });
+  }
   }catch(err){
     console.log(err)
   }
