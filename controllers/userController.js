@@ -10,12 +10,16 @@ exports.addEvent = async (req, res) => {
     let existingEvent = await Event.findOne({ date });
 
     if (existingEvent) {
+      if (existingEvent.events.includes(data[i]) == false) {
       existingEvent.events.push(event);
       await existingEvent.save();
     } else {
       existingEvent = new Event({ date, events: [event] });
       await existingEvent.save();
     }
+  }else{
+    res.status(400).json({ message: "Event already added"});
+  }
 
     res.status(201).json({ message: "Event added successfully", data: existingEvent });
   } catch (error) {
